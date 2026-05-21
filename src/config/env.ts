@@ -1,0 +1,30 @@
+import { config } from "dotenv";
+import { z } from "zod";
+
+config();
+
+const envSchema = z.object({
+  PORT: z.coerce.number().default(4000),
+  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+  CORS_ORIGIN: z.string().default("http://localhost:3000"),
+  MATUDB_URL: z.string().url().default("http://localhost:3001"),
+  MATUDB_PROJECT_ID: z.string().min(1, "MATUDB_PROJECT_ID is required"),
+  MATUDB_API_KEY: z.string().min(1, "MATUDB_API_KEY is required"),
+  MATUDB_USE_SUPABASE: z
+    .string()
+    .optional()
+    .transform((v) => v === "true"),
+  NGINX_VHOSTS_DIR: z.string().default("./data/nginx/sites-available"),
+  NGINX_SITES_ENABLED_DIR: z.string().default("./data/nginx/sites-enabled"),
+  DEFAULT_SERVER_IP: z.string().default("127.0.0.1"),
+  DEFAULT_DOCUMENT_ROOT: z.string().default("./data/www"),
+});
+
+const parsed = envSchema.safeParse(process.env);
+
+if (!parsed.success) {
+  console.error("Invalid environment variables:", parsed.error.flatten().fieldErrors);
+  process.exit(1);
+}
+
+export const env = parsed.data;
