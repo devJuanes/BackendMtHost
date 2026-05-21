@@ -2,13 +2,21 @@
 
 API REST para el mini hosting MatuHost. Base de datos y auth vía **MatuDB** (`@devjuanes/matuclient`).
 
-## Inicio rápido
+## Repositorio
+
+**https://github.com/devJuanes/BackendMtHost** — desde aquí se trabaja y despliega el backend.
+
+Despliegue en VPS: [docs/08-server-production.md](docs/08-server-production.md)
+
+## Inicio rápido (local)
 
 ```bash
-cd Backend
+git clone https://github.com/devJuanes/BackendMtHost.git
+cd BackendMtHost
 cp .env.example .env
 npm install
 npm run db:migrate
+npm run db:sync-users
 npm run dev
 ```
 
@@ -27,3 +35,4 @@ Ver carpeta `docs/`:
 - [Dominios](docs/05-domains.md)
 - [Hosting](docs/06-hosting.md)
 - [API](docs/07-api-reference.md)
+- [Servidor producción](docs/08-server-production.md)

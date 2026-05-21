@@ -14,7 +14,7 @@
 
 Instala y ejecuta el servidor MatuDB (paquete `matu-db-api`) en el puerto **3001**.
 
-Variables en `Backend/.env`:
+Variables en `.env`:
 
 ```env
 MATUDB_URL=http://localhost:3001
@@ -26,10 +26,12 @@ MATUDB_USE_SUPABASE=false
 Migrar esquema MatuHost vía MatuDB:
 
 ```bash
-cd Backend
+git clone https://github.com/devJuanes/BackendMtHost.git
+cd BackendMtHost
 npm install
 cp .env.example .env
 npm run db:migrate
+npm run db:sync-users
 ```
 
 ## Página por defecto del dominio
@@ -45,7 +47,7 @@ npm run sites:default
 ## 2. Backend API
 
 ```bash
-cd Backend
+cd BackendMtHost
 npm install
 npm run dev
 ```
