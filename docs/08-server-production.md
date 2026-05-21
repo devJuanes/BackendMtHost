@@ -22,15 +22,15 @@ Ejemplo con **MatuDB cloud** (como en desarrollo):
 ```env
 PORT=4000
 NODE_ENV=production
-CORS_ORIGIN=https://tu-panel.matudb.com,http://localhost:3000
+CORS_ORIGIN=https://matuhost.com,http://localhost:3000
 
 MATUDB_URL=https://db.matudb.com
-MATUDB_PROJECT_ID=tu-project-id
-MATUDB_API_KEY=mb_tu_clave
+MATUDB_PROJECT_ID=05caba8c-3ae5-4405-b3d6-a121efbcc91c
+MATUDB_API_KEY=mb_31ad2738a64cef16bb1c37a0e03b15ef1e40ae761793d24560201a4dd0840f47
 MATUDB_USE_SUPABASE=false
 
 # IP pública del VPS (la que apuntan los registros A de los dominios)
-DEFAULT_SERVER_IP=203.0.113.10
+DEFAULT_SERVER_IP=187.124.241.122
 
 # Rutas reales en el servidor
 NGINX_VHOSTS_DIR=/etc/nginx/sites-available
@@ -61,11 +61,17 @@ npm run db:sync-users
 
 ## 4. Arrancar la API con PM2
 
+PM2 no viene instalado por defecto en Ubuntu:
+
 ```bash
-npm install -g pm2
+sudo npm install -g pm2
+# o sin sudo si usas nvm: npm install -g pm2
+
+cd ~/apps/BackendMtHost   # tu ruta del clone
 pm2 start dist/index.js --name matuhost-api
+pm2 logs matuhost-api     # ver que arrancó (Ctrl+C para salir)
 pm2 save
-pm2 startup
+pm2 startup               # copia y ejecuta el comando que te imprime (sudo ...)
 ```
 
 Comprobar:
@@ -75,39 +81,43 @@ curl http://127.0.0.1:4000/api/dashboard/stats
 # Sin token devolverá 401 — eso confirma que la API responde
 ```
 
-## 5. Nginx del sistema + reverse proxy API (opcional)
+## 5. Nginx: exponer la API (puerto 80, no 4000)
 
-Sitios de clientes: los vhosts generados en `sites-available` / `sites-enabled`.
+La API solo escucha en el VPS (`127.0.0.1:4000`). Desde tu PC **`http://IP:4000` suele hacer timeout** (firewall). Usa Nginx en el puerto 80.
 
-Proxy del panel hacia la API (ejemplo):
+**Por IP** (sin SSL — Certbot no certifica IPs):
 
-```nginx
-server {
-    listen 80;
-    server_name api.tudominio.com;
+```bash
+sudo cp ~/apps/BackendMtHost/docs/nginx-matuhost-api.conf.example /etc/nginx/sites-available/matuhost-api.conf
+sudo ln -sf /etc/nginx/sites-available/matuhost-api.conf /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+curl http://TU_IP/api/dashboard/stats
+```
 
-    location /api {
-        proxy_pass http://127.0.0.1:4000;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
+**CORS** en `~/apps/BackendMtHost/.env`:
+
+```env
+CORS_ORIGIN=http://localhost:3000,http://127.0.0.1:3000
+DEFAULT_SERVER_IP=187.124.241.122
 ```
 
 ```bash
-sudo nginx -t && sudo systemctl reload nginx
+pm2 restart matuhost-api --update-env
 ```
 
-## 6. Frontend (otro repo / carpeta)
+**Alternativa:** abrir puerto 4000: `sudo ufw allow 4000/tcp` (menos recomendado).
 
-En el servidor o en Vercel, configura el panel:
+**Con dominio** (`api.tudominio.com` → IP del VPS): `sudo certbot --nginx -d api.tudominio.com`
+
+## 6. Frontend (panel Next.js)
+
+En tu PC (`matuhost/.env.local`):
 
 ```env
-NEXT_PUBLIC_API_URL=https://api.tudominio.com/api
+NEXT_PUBLIC_API_URL=http://187.124.241.122/api
 ```
 
-(o `http://IP_VPS:4000/api` mientras pruebas).
+Reinicia `npm run dev` del frontend tras cambiar `.env.local`.
 
 ## 7. Checklist “ya es real”
 
@@ -123,7 +133,7 @@ NEXT_PUBLIC_API_URL=https://api.tudominio.com/api
 ## 8. Actualizar el servidor
 
 ```bash
-cd /opt/BackendMtHost
+cd ~/apps/BackendMtHost
 git pull
 npm install
 npm run build

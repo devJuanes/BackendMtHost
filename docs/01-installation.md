@@ -98,7 +98,9 @@ sudo ufw enable
 ## 6. Producción con PM2
 
 ```bash
+sudo npm install -g pm2
 npm run build
 pm2 start dist/index.js --name matuhost-api
 pm2 save
+pm2 startup
 ```
