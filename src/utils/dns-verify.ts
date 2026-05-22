@@ -2,8 +2,11 @@ import dns from "dns/promises";
 import { env } from "../config/env.js";
 
 export interface DnsVerifyResult {
+  /** Listo para servir desde MatuHost (BIND + IP correcta). */
   verified: boolean;
   authoritative: boolean;
+  /** Resuelve desde DNS público (Google, ISP, etc.). */
+  public_resolved: boolean;
   resolved_ips: string[];
   message: string;
 }
@@ -18,10 +21,17 @@ async function resolveAt(fqdn: string, nameserverIp: string): Promise<string[]> 
       const answers = await resolver.resolve4(host);
       answers.forEach((ip) => ips.add(ip));
     } catch {
-      /* host sin registro */
+      /* sin registro en este host */
     }
   }
   return [...ips];
+}
+
+export function isUnderPlatformApex(fqdn: string): boolean {
+  const apex = env.PLATFORM_APEX_DOMAIN?.trim().toLowerCase();
+  if (!apex) return false;
+  const f = fqdn.toLowerCase();
+  return f === apex || f.endsWith(`.${apex}`);
 }
 
 /** Consulta el DNS autoritativo de MatuHost (BIND en el VPS). */
@@ -31,29 +41,32 @@ export async function verifyDomainDnsAuthoritative(
 ): Promise<DnsVerifyResult> {
   const server = env.DNS_SERVER_IP || env.DEFAULT_SERVER_IP;
   const ips = await resolveAt(fqdn, server);
+  const expected = expectedIp.trim();
 
   if (ips.length === 0) {
     return {
       verified: false,
       authoritative: false,
+      public_resolved: false,
       resolved_ips: [],
       message:
-        "La zona existe en MatuHost pero BIND aún no responde. Ejecuta en el servidor: npm run dns:sync y verifica que el puerto 53 esté abierto.",
+        "Zona creada en MatuHost; BIND no responde aún. En el servidor: npm run dns:sync, sudo ufw allow 53, sudo systemctl restart named",
     };
   }
 
-  const verified = ips.includes(expectedIp.trim());
+  const ok = ips.includes(expected);
   return {
-    verified,
-    authoritative: true,
+    verified: ok,
+    authoritative: ok,
+    public_resolved: false,
     resolved_ips: ips,
-    message: verified
-      ? `DNS MatuHost activo (${server}): el dominio apunta a ${expectedIp}`
-      : `DNS MatuHost responde ${ips.join(", ")} pero se esperaba ${expectedIp}`,
+    message: ok
+      ? `En línea en MatuHost: DNS autoritativo (${server}) → ${expected}`
+      : `BIND responde ${ips.join(", ")}; se esperaba ${expected}`,
   };
 }
 
-/** Resolución pública (Internet) — requiere delegación NS hacia MatuHost o registro en TLD padre. */
+/** Resolución pública global (opcional; no bloquea el panel). */
 export async function verifyDomainDnsPublic(
   fqdn: string,
   expectedIp: string
@@ -72,6 +85,7 @@ export async function verifyDomainDnsPublic(
       return {
         verified: false,
         authoritative: false,
+        public_resolved: false,
         resolved_ips: [...allIps],
         message: `Error DNS público (${host}): ${(err as Error).message}`,
       };
@@ -82,29 +96,56 @@ export async function verifyDomainDnsPublic(
     return {
       verified: false,
       authoritative: false,
+      public_resolved: false,
       resolved_ips: [],
-      message: `Sin resolución pública. Delega NS a ${env.MATUHOST_NS1} y ${env.MATUHOST_NS2} en el registrador del TLD (futuro: API registrador MatuHost).`,
+      message: isUnderPlatformApex(fqdn)
+        ? "Propagación global pendiente (el apex de plataforma debe delegar NS a MatuHost una sola vez)."
+        : "Propagación global pendiente. El dominio ya funciona en la infraestructura MatuHost; la API de registrador asignará NS automáticamente.",
     };
   }
 
-  const verified = allIps.has(expected);
+  const ok = allIps.has(expected);
   return {
-    verified,
+    verified: ok,
     authoritative: false,
+    public_resolved: ok,
     resolved_ips: [...allIps],
-    message: verified
-      ? `DNS público OK: ${expected}`
-      : `DNS público resuelve a ${[...allIps].join(", ")} (esperado ${expected})`,
+    message: ok
+      ? `DNS público global OK → ${expected}`
+      : `DNS público: ${[...allIps].join(", ")} (esperado ${expected})`,
   };
 }
 
-/** Autoritativo primero; si OK, dominio en línea en la plataforma. */
+/**
+ * Verificación completa: MatuHost autoritativo = en línea en la plataforma.
+ * Público global es informativo adicional.
+ */
 export async function verifyDomainDns(fqdn: string, expectedIp: string): Promise<DnsVerifyResult> {
   const auth = await verifyDomainDnsAuthoritative(fqdn, expectedIp);
-  if (auth.verified) return auth;
-
   const pub = await verifyDomainDnsPublic(fqdn, expectedIp);
-  if (pub.verified) return pub;
 
-  return auth.resolved_ips.length > 0 ? auth : pub;
+  if (auth.verified) {
+    const message = pub.public_resolved
+      ? `${auth.message} · ${pub.message}`
+      : `${auth.message} · Sitio activo en tu VPS (acceso: http://${fqdn} cuando NS global propaguen o vía IP del servidor).`;
+    return {
+      verified: true,
+      authoritative: true,
+      public_resolved: pub.public_resolved,
+      resolved_ips: auth.resolved_ips.length ? auth.resolved_ips : pub.resolved_ips,
+      message,
+    };
+  }
+
+  if (pub.public_resolved) {
+    return { ...pub, verified: true };
+  }
+
+  return {
+    verified: false,
+    authoritative: auth.authoritative,
+    public_resolved: false,
+    resolved_ips: auth.resolved_ips.length ? auth.resolved_ips : pub.resolved_ips,
+    message: auth.resolved_ips.length ? auth.message : pub.message,
+  };
 }

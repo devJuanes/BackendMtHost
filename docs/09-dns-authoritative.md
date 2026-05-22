@@ -61,16 +61,30 @@ dig @187.124.241.122 landatech.ai NS +short
 npm run dns:sync
 ```
 
-## Resolución pública en Internet
+## En línea vs propagación global
 
-Para dominios **nuevos** (.com, .ai, etc.) hace falta que el TLD delegue NS hacia MatuHost:
+| Estado | Significado |
+|--------|-------------|
+| **Activo MatuHost** | BIND en tu VPS responde con la IP correcta → sitio + Nginx listos |
+| **En línea** | Además resuelve en DNS público global |
 
-- `ns1.matuhost.com` → IP del VPS (registro A glue)
-- `ns2.matuhost.com` → IP del VPS
+El panel **no bloquea** por falta de DNS público: si MatuHost DNS autoritativo OK, el dominio queda activo.
 
-Hoy el **registro/compra** sigue siendo interno (sin ICANN). La **zona DNS** ya es real en tu infra.
+## Dominios sin pasos manuales (recomendado MVP)
 
-Cuando conectes un registrador por API, solo cambia `domain-registry.service.ts`; el pipeline DNS/Nginx no cambia.
+Configura en `.env`:
+
+```env
+PLATFORM_APEX_DOMAIN=hosts.matuhost.com
+```
+
+El usuario registra `miweb` → la plataforma crea `miweb.hosts.matuhost.com` con zona BIND automática.
+
+Delega **una sola vez** en el registrador del apex `matuhost.com` los NS hacia MatuHost; los subdominios de clientes no requieren GoDaddy.
+
+## Dominios apex propios (.ai, .com)
+
+La **zona BIND** se crea igual desde el panel. La API de registrador (futuro) asignará NS a `ns1.matuhost.com` / `ns2.matuhost.com` sin intervención del usuario.
 
 ## API
 

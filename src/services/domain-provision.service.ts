@@ -9,6 +9,7 @@ export interface DomainHealth {
   dns_message: string;
   site_url: string;
   authoritative?: boolean;
+  public_resolved?: boolean;
   nameservers?: string[];
 }
 

@@ -27,6 +27,8 @@ const envSchema = z.object({
   DNS_RELOAD_CMD: z.string().optional(),
   NGINX_RELOAD_CMD: z.string().optional(),
   CERTBOT_CMD: z.string().optional(),
+  /** Dominio apex de la plataforma (ej. hosts.matuhost.com). Registro "miweb" → miweb.hosts.matuhost.com */
+  PLATFORM_APEX_DOMAIN: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

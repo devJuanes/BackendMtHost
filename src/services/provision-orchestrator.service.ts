@@ -94,13 +94,16 @@ export async function buildHealth(domain: Domain): Promise<DomainHealth> {
     .limit(1);
   const vhost = vhosts?.[0] as { enabled?: boolean; status?: string } | undefined;
 
+  const platformOnline = auth.verified;
+
   return {
-    dns_verified: combined.verified,
+    dns_verified: platformOnline,
     hosting_provisioned: Boolean(vhost?.enabled && zone?.status === "active"),
     resolved_ips: combined.resolved_ips,
     dns_message: combined.message,
     site_url: `http://${domain.fqdn}`,
-    authoritative: auth.authoritative && auth.verified,
+    authoritative: platformOnline,
+    public_resolved: combined.public_resolved,
     nameservers: zone?.nameservers ?? [env.MATUHOST_NS1, env.MATUHOST_NS2],
   };
 }
