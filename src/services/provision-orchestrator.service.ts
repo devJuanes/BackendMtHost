@@ -12,6 +12,7 @@ import {
 } from "./dns-zone.service.js";
 import type { DomainHealth } from "./domain-provision.service.js";
 import { publishGlobalDns } from "./global-dns.service.js";
+import { getManualDnsInstructions } from "../utils/manual-dns-instructions.js";
 import { ensureNginxDefaultSite } from "./nginx-default.service.js";
 
 export interface ProvisionResult {
@@ -99,15 +100,30 @@ export async function buildHealth(domain: Domain): Promise<DomainHealth> {
 
   const platformOnline = auth.verified;
 
+  const manual = !combined.public_resolved ? getManualDnsInstructions(domain.fqdn) : undefined;
+  let dns_message = combined.message;
+  if (!combined.public_resolved && manual) {
+    dns_message =
+      "DNS global pendiente — no está en Internet aún. Configura en tu registrador (ver manual_dns en API o abajo).";
+  }
+
   return {
     dns_verified: platformOnline,
     hosting_provisioned: Boolean(vhost?.enabled && zone?.status === "active"),
     resolved_ips: combined.resolved_ips,
-    dns_message: combined.message,
+    dns_message,
     site_url: `http://${domain.fqdn}`,
     global_dns_ready: combined.public_resolved,
     authoritative: platformOnline,
     public_resolved: combined.public_resolved,
     nameservers: zone?.nameservers ?? [env.MATUHOST_NS1, env.MATUHOST_NS2],
+    manual_dns: manual
+      ? {
+          mode: manual.mode,
+          steps: manual.steps,
+          a_records: manual.a_records,
+          nameservers: manual.nameservers,
+        }
+      : undefined,
   };
 }

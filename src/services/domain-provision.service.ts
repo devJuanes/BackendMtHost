@@ -12,6 +12,12 @@ export interface DomainHealth {
   public_resolved?: boolean;
   global_dns_ready?: boolean;
   nameservers?: string[];
+  manual_dns?: {
+    mode: string;
+    steps: string[];
+    a_records: { name: string; type: string; value: string }[];
+    nameservers: string[];
+  };
 }
 
 export async function getDomainHealth(domain: Domain): Promise<DomainHealth> {

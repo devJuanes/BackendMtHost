@@ -146,7 +146,7 @@ export async function verifyDomainDns(fqdn: string, expectedIp: string): Promise
   if (auth.verified) {
     const message = pub.public_resolved
       ? `${auth.message} · ${pub.message}`
-      : `${auth.message} · DNS global propagando (reintenta verificar en 2–5 min).`;
+      : `${auth.message} · DNS global: no publicado en Internet (configura A o NS en tu registrador).`;
     return {
       verified: true,
       authoritative: true,
