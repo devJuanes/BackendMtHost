@@ -36,3 +36,5 @@ Ver carpeta `docs/`:
 - [Hosting](docs/06-hosting.md)
 - [API](docs/07-api-reference.md)
 - [Servidor producción](docs/08-server-production.md)
+- [DNS autoritativo (BIND)](docs/09-dns-authoritative.md)
+- [Arquitectura](docs/10-architecture.md)

@@ -4,6 +4,9 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { validateBody, validateParams } from "../middleware/validate.js";
 import { authenticate } from "../middleware/auth.js";
 import * as dnsService from "../services/dns.service.js";
+import { syncAuthoritativeZone, getZoneForDomain } from "../services/dns-zone.service.js";
+import { getDb, throwIfMatuError } from "../db/matu.js";
+import type { Domain } from "../types/index.js";
 
 const router = Router();
 router.use(authenticate);
@@ -56,6 +59,31 @@ router.delete(
   asyncHandler(async (req, res) => {
     await dnsService.deleteDnsRecord(req.userId!, req.params.id);
     res.json({ success: true, data: { deleted: true } });
+  })
+);
+
+router.post(
+  "/domain/:domainId/sync",
+  validateParams(domainParam),
+  asyncHandler(async (req, res) => {
+    const { data, error } = await getDb()
+      .from("domains")
+      .select("*")
+      .eq("id", req.params.domainId)
+      .eq("user_id", req.userId!)
+      .single();
+    throwIfMatuError(error, "Domain not found");
+    const zone = await syncAuthoritativeZone(data as Domain);
+    res.json({ success: true, data: zone });
+  })
+);
+
+router.get(
+  "/domain/:domainId/zone",
+  validateParams(domainParam),
+  asyncHandler(async (req, res) => {
+    const zone = await getZoneForDomain(req.params.domainId);
+    res.json({ success: true, data: zone });
   })
 );
 

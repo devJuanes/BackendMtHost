@@ -14,9 +14,24 @@ export interface Domain {
   tld: string;
   status: "pending" | "active" | "expired" | "suspended";
   is_simulated: boolean;
+  platform_managed?: boolean;
+  registration_source?: string;
   expires_at: string | null;
   server_ip: string | null;
   notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DnsZone {
+  id: string;
+  domain_id: string;
+  fqdn: string;
+  zone_file: string;
+  serial: number;
+  nameserver_1: string;
+  nameserver_2: string;
+  status: "pending" | "active" | "error";
   created_at: string;
   updated_at: string;
 }

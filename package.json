@@ -10,7 +10,9 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "db:migrate": "tsx src/db/migrate.ts",
+    "db:migrate:dns": "tsx src/db/migrate-dns.ts",
     "db:sync-users": "tsx src/db/sync-users.ts",
+    "dns:sync": "tsx src/db/sync-dns-zones.ts",
     "sites:default": "tsx src/db/provision-default-sites.ts"
   },
   "dependencies": {

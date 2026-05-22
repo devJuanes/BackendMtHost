@@ -4,9 +4,12 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { validateBody, validateParams } from "../middleware/validate.js";
 import { authenticate } from "../middleware/auth.js";
 import * as domainService from "../services/domain.service.js";
+import { checkDomainAvailability } from "../services/domain-registry.service.js";
 
 const router = Router();
 router.use(authenticate);
+
+const checkQuery = z.object({ fqdn: z.string().min(3).max(253) });
 
 const idParam = z.object({ id: z.string().uuid() });
 
@@ -20,6 +23,15 @@ const updateSchema = z.object({
   notes: z.string().max(500).optional(),
   server_ip: z.string().optional(),
 });
+
+router.get(
+  "/check",
+  asyncHandler(async (req, res) => {
+    const { fqdn } = checkQuery.parse({ fqdn: req.query.fqdn });
+    const result = await checkDomainAvailability(fqdn);
+    res.json({ success: true, data: result });
+  })
+);
 
 router.get(
   "/",

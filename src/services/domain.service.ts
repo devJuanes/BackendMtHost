@@ -1,15 +1,18 @@
 import { getDb, throwIfMatuError, pickRow } from "../db/matu.js";
 import { env } from "../config/env.js";
 import type { Domain } from "../types/index.js";
-import { NotFoundError, ValidationError, ConflictError } from "../utils/errors.js";
+import { NotFoundError, ValidationError } from "../utils/errors.js";
 import { parseFqdn } from "../utils/domain.js";
-import { ensureDefaultSite } from "../utils/default-site.js";
 import {
   getDomainHealth,
   provisionDomainOnServer,
   verifyAndSyncDomain,
 } from "./domain-provision.service.js";
 import type { DomainHealth } from "./domain-provision.service.js";
+import { assertNotRegistered } from "./domain-registry.service.js";
+import { seedPlatformDnsRecords } from "./dns-zone.service.js";
+import { fullProvisionDomain } from "./provision-orchestrator.service.js";
+import { removeAuthoritativeZone } from "./dns-zone.service.js";
 
 export type DomainWithHealth = Domain & { health?: DomainHealth };
 
@@ -44,6 +47,7 @@ export async function getDomain(userId: string, id: string): Promise<DomainWithH
   return { ...domain, health: await getDomainHealth(domain) };
 }
 
+/** Registro interno + aprovisionamiento automático (DNS + Nginx + sitio). */
 export async function createDomain(
   userId: string,
   fqdnInput: string,
@@ -52,16 +56,7 @@ export async function createDomain(
   const parsed = parseFqdn(fqdnInput);
   if (!parsed) throw new ValidationError("Invalid domain name");
 
-  const { data: dup } = await getDb()
-    .from("domains")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("fqdn", parsed.fqdn)
-    .limit(1);
-
-  if (dup && dup.length > 0) {
-    throw new ConflictError("Domain already exists in your account");
-  }
+  await assertNotRegistered(parsed.fqdn);
 
   const expiresAt = new Date();
   expiresAt.setFullYear(expiresAt.getFullYear() + 1);
@@ -71,33 +66,35 @@ export async function createDomain(
     fqdn: parsed.fqdn,
     tld: parsed.tld,
     status: "pending",
-    is_simulated: true,
+    is_simulated: false,
+    platform_managed: true,
+    registration_source: "matuhost",
     expires_at: expiresAt.toISOString(),
     server_ip: env.DEFAULT_SERVER_IP,
     notes: notes ?? null,
   });
 
   throwIfMatuError(error);
-  const domain = pickRow<Domain>(inserted);
+  let domain = pickRow<Domain>(inserted);
 
-  const { error: dnsError } = await getDb().from("dns_records").insert([
-    { user_id: userId, domain_id: domain.id, type: "A", name: "@", content: env.DEFAULT_SERVER_IP, ttl: 3600 },
-    { user_id: userId, domain_id: domain.id, type: "A", name: "www", content: env.DEFAULT_SERVER_IP, ttl: 3600 },
-    {
-      user_id: userId,
-      domain_id: domain.id,
-      type: "TXT",
-      name: "@",
-      content: "v=spf1 include:_spf.matuhost.local ~all",
-      ttl: 3600,
-    },
-  ]);
-  throwIfMatuError(dnsError);
+  await seedPlatformDnsRecords(userId, domain.id, domain.fqdn);
+  const result = await fullProvisionDomain(userId, domain);
 
-  await ensureDefaultSite(parsed.fqdn);
-  await provisionDomainOnServer(userId, domain);
+  const updates = {
+    status: result.health.dns_verified || result.health.authoritative ? "active" : "pending",
+    is_simulated: false,
+    platform_managed: true,
+    updated_at: new Date().toISOString(),
+  };
 
-  return getDomain(userId, domain.id);
+  const { data: rows, error: updErr } = await getDb()
+    .from("domains")
+    .eq("id", domain.id)
+    .update(updates);
+  throwIfMatuError(updErr);
+  domain = { ...domain, ...pickRow<Domain>(rows), ...updates };
+
+  return { ...domain, health: result.health };
 }
 
 export async function updateDomain(
@@ -123,7 +120,8 @@ export async function updateDomain(
 }
 
 export async function deleteDomain(userId: string, id: string): Promise<void> {
-  await getDomain(userId, id);
+  const domain = await getDomain(userId, id);
+  await removeAuthoritativeZone(domain.fqdn, domain.id);
   const { error } = await getDb().from("domains").eq("id", id).eq("user_id", userId).delete();
   throwIfMatuError(error);
 }
@@ -131,7 +129,7 @@ export async function deleteDomain(userId: string, id: string): Promise<void> {
 export async function activateDomain(userId: string, id: string): Promise<DomainWithHealth> {
   const domain = await getDomain(userId, id);
   await updateDomain(userId, id, { status: "active" });
-  await provisionDomainOnServer(userId, domain);
+  await fullProvisionDomain(userId, { ...domain, status: "active" });
   return verifyAndSyncDomain(userId, { ...domain, status: "active" });
 }
 
@@ -140,7 +138,6 @@ export async function verifyDomainDnsForUser(
   id: string
 ): Promise<DomainWithHealth> {
   const domain = await getDomain(userId, id);
-  await provisionDomainOnServer(userId, domain);
   return verifyAndSyncDomain(userId, domain);
 }
 
@@ -149,6 +146,6 @@ export async function reprovisionDomain(
   id: string
 ): Promise<DomainWithHealth> {
   const domain = await getDomain(userId, id);
-  await provisionDomainOnServer(userId, domain);
+  await fullProvisionDomain(userId, domain);
   return { ...domain, health: await getDomainHealth(domain) };
 }

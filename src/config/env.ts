@@ -18,6 +18,15 @@ const envSchema = z.object({
   NGINX_SITES_ENABLED_DIR: z.string().default("./data/nginx/sites-enabled"),
   DEFAULT_SERVER_IP: z.string().default("127.0.0.1"),
   DEFAULT_DOCUMENT_ROOT: z.string().default("./data/www"),
+  DNS_ZONES_DIR: z.string().default("./data/dns/zones"),
+  DNS_NAMED_CONF_SNIPPET: z.string().default("./data/dns/matuhost-zones.conf"),
+  DNS_SERVER_IP: z.string().optional(),
+  MATUHOST_NS1: z.string().default("ns1.matuhost.com"),
+  MATUHOST_NS2: z.string().default("ns2.matuhost.com"),
+  DNS_ADMIN_EMAIL: z.string().default("hostmaster.matuhost.com"),
+  DNS_RELOAD_CMD: z.string().optional(),
+  NGINX_RELOAD_CMD: z.string().optional(),
+  CERTBOT_CMD: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -27,4 +36,9 @@ if (!parsed.success) {
   process.exit(1);
 }
 
-export const env = parsed.data;
+const data = parsed.data;
+
+export const env = {
+  ...data,
+  DNS_SERVER_IP: data.DNS_SERVER_IP ?? data.DEFAULT_SERVER_IP,
+};
