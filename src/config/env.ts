@@ -29,6 +29,8 @@ const envSchema = z.object({
   CERTBOT_CMD: z.string().optional(),
   /** Dominio apex de la plataforma (ej. hosts.matuhost.com). Registro "miweb" → miweb.hosts.matuhost.com */
   PLATFORM_APEX_DOMAIN: z.string().optional(),
+  /** Ruta preview: http://IP/site-preview/dominio/ */
+  SITE_PREVIEW_PATH: z.string().default("/site-preview"),
 });
 
 const parsed = envSchema.safeParse(process.env);

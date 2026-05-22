@@ -113,19 +113,19 @@ export function renderDefaultSiteHtml(options: DefaultSiteOptions): string {
 </head>
 <body>
   <div class="wrap">
-    <div class="badge"><span class="badge-dot"></span> Dominio conectado</div>
-    <h1>Sitio en preparación</h1>
+    <div class="badge"><span class="badge-dot"></span> Conectado a MatuHost</div>
+    <h1>Tu dominio ya está enlazado</h1>
     <p>
-      <strong>${escapeHtml(fqdn)}</strong> está registrado en MatuHost y responde correctamente.
+      Si ves esta página, el hosting de <strong>${escapeHtml(fqdn)}</strong> está activo en el servidor MatuHost.
       <span class="domain">${escapeHtml(fqdn)}</span>
     </p>
 
     <h2>¿Por qué veo esta página?</h2>
-    <p>Puede deberse a lo siguiente:</p>
+    <p>Es la página de bienvenida por defecto. Significa que DNS y Nginx en tu VPS están configurados; aún no has subido tu propia web.</p>
     <ol>
-      <li>El dominio se creó y el DNS apunta bien, pero aún no has desplegado una aplicación.</li>
-      <li>La carpeta <code>public_html</code> existe pero está vacía o solo tiene esta página de bienvenida.</li>
-      <li>Acabas de activar el dominio y el panel aún no ha subido tus archivos.</li>
+      <li>El dominio está registrado en MatuHost y el servidor responde.</li>
+      <li>Cuando reemplaces <code>index.html</code> en <code>public_html</code>, verás tu sitio.</li>
+      <li>Si el navegador muestra error DNS al abrir solo el nombre del dominio, usa el enlace de vista previa del panel hasta que el DNS global termine de propagar.</li>
     </ol>
 
     <h2>¿Cómo publico mi sitio?</h2>

@@ -10,6 +10,7 @@ import {
   syncAuthoritativeZone,
   getZoneForDomain,
 } from "./dns-zone.service.js";
+import { getPreviewSiteUrl } from "../utils/nginx-preview.js";
 import type { DomainHealth } from "./domain-provision.service.js";
 
 export interface ProvisionResult {
@@ -101,7 +102,10 @@ export async function buildHealth(domain: Domain): Promise<DomainHealth> {
     hosting_provisioned: Boolean(vhost?.enabled && zone?.status === "active"),
     resolved_ips: combined.resolved_ips,
     dns_message: combined.message,
-    site_url: `http://${domain.fqdn}`,
+    site_url: combined.public_resolved
+      ? `http://${domain.fqdn}`
+      : getPreviewSiteUrl(domain.fqdn),
+    preview_url: getPreviewSiteUrl(domain.fqdn),
     authoritative: platformOnline,
     public_resolved: combined.public_resolved,
     nameservers: zone?.nameservers ?? [env.MATUHOST_NS1, env.MATUHOST_NS2],

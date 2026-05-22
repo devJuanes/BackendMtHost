@@ -107,6 +107,8 @@ DEFAULT_SERVER_IP=187.124.241.122
 pm2 restart matuhost-api --update-env
 ```
 
+**Vista previa del sitio (sin DNS global):** en `matuhost-api.conf` añade el bloque `location /site-preview/` del ejemplo `docs/nginx-matuhost-api.conf.example`, luego `sudo nginx -t && sudo systemctl reload nginx`. Abre `http://187.124.241.122/site-preview/tudominio.com/` para ver la página de bienvenida aunque el dominio aún devuelva NXDOMAIN en el navegador.
+
 **Alternativa:** abrir puerto 4000: `sudo ufw allow 4000/tcp` (menos recomendado).
 
 **Con dominio** (`api.tudominio.com` → IP del VPS): `sudo certbot --nginx -d api.tudominio.com`
