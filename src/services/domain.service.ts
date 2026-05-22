@@ -48,7 +48,7 @@ export async function createDomain(
   userId: string,
   fqdnInput: string,
   notes?: string
-): Promise<Domain> {
+): Promise<DomainWithHealth> {
   const parsed = parseFqdn(fqdnInput);
   if (!parsed) throw new ValidationError("Invalid domain name");
 
@@ -97,7 +97,7 @@ export async function createDomain(
   await ensureDefaultSite(parsed.fqdn);
   await provisionDomainOnServer(userId, domain);
 
-  return { ...(await getDomain(userId, domain.id)), health: await getDomainHealth(domain) };
+  return getDomain(userId, domain.id);
 }
 
 export async function updateDomain(
