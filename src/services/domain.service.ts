@@ -80,8 +80,11 @@ export async function createDomain(
   await seedPlatformDnsRecords(userId, domain.id, domain.fqdn);
   const result = await fullProvisionDomain(userId, domain);
 
+  const status: Domain["status"] =
+    result.health.authoritative || result.health.dns_verified ? "active" : "pending";
+
   const updates = {
-    status: result.health.authoritative || result.health.dns_verified ? "active" : "pending",
+    status,
     is_simulated: false,
     platform_managed: true,
     updated_at: new Date().toISOString(),
@@ -92,7 +95,7 @@ export async function createDomain(
     .eq("id", domain.id)
     .update(updates);
   throwIfMatuError(updErr);
-  domain = { ...domain, ...pickRow<Domain>(rows), ...updates };
+  domain = { ...domain, ...pickRow<Domain>(rows), ...updates } as Domain;
 
   return { ...domain, health: result.health };
 }
