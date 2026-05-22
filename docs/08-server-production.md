@@ -85,7 +85,7 @@ curl http://127.0.0.1:4000/api/dashboard/stats
 
 La API solo escucha en el VPS (`127.0.0.1:4000`). Desde tu PC **`http://IP:4000` suele hacer timeout** (firewall). Usa Nginx en el puerto 80.
 
-**Por IP** (sin SSL — Certbot no certifica IPs):
+**Por IP** (sin SSL — Certbot no certifica IPs). No uses `default_server` si ya hay otro sitio con ese flag (error *duplicate default server*).
 
 ```bash
 sudo cp ~/apps/BackendMtHost/docs/nginx-matuhost-api.conf.example /etc/nginx/sites-available/matuhost-api.conf
@@ -93,6 +93,8 @@ sudo ln -sf /etc/nginx/sites-available/matuhost-api.conf /etc/nginx/sites-enable
 sudo nginx -t && sudo systemctl reload nginx
 curl http://TU_IP/api/dashboard/stats
 ```
+
+Si `nginx -t` falla por duplicate default server: quita `default_server` de `matuhost-api.conf` (deja solo `listen 80;` y `server_name TU_IP;`).
 
 **CORS** en `~/apps/BackendMtHost/.env`:
 

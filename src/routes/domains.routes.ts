@@ -66,6 +66,24 @@ router.post(
   })
 );
 
+router.post(
+  "/:id/verify-dns",
+  validateParams(idParam),
+  asyncHandler(async (req, res) => {
+    const domain = await domainService.verifyDomainDnsForUser(req.userId!, req.params.id);
+    res.json({ success: true, data: domain });
+  })
+);
+
+router.post(
+  "/:id/provision",
+  validateParams(idParam),
+  asyncHandler(async (req, res) => {
+    const domain = await domainService.reprovisionDomain(req.userId!, req.params.id);
+    res.json({ success: true, data: domain });
+  })
+);
+
 router.delete(
   "/:id",
   validateParams(idParam),

@@ -1,10 +1,12 @@
 # Copiar a /etc/nginx/sites-available/matuhost-api.conf
 # Acceso por IP (sin dominio) — Let's Encrypt NO emite cert para IP sola.
 
+# Sin default_server: otro sitio (ej. radio.logsfm.com) ya lo usa.
+# Acceso por IP: Host = 187.124.241.122 coincide con server_name.
 server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
-    server_name 187.124.241.122 _;
+    listen 80;
+    listen [::]:80;
+    server_name 187.124.241.122;
 
     location /api {
         proxy_pass http://127.0.0.1:4000;

@@ -4,8 +4,16 @@ import type { Domain } from "../types/index.js";
 import { NotFoundError, ValidationError, ConflictError } from "../utils/errors.js";
 import { parseFqdn } from "../utils/domain.js";
 import { ensureDefaultSite } from "../utils/default-site.js";
+import {
+  getDomainHealth,
+  provisionDomainOnServer,
+  verifyAndSyncDomain,
+} from "./domain-provision.service.js";
+import type { DomainHealth } from "./domain-provision.service.js";
 
-export async function listDomains(userId: string): Promise<Domain[]> {
+export type DomainWithHealth = Domain & { health?: DomainHealth };
+
+export async function listDomains(userId: string): Promise<DomainWithHealth[]> {
   const { data, error } = await getDb()
     .from("domains")
     .select("*")
@@ -13,10 +21,16 @@ export async function listDomains(userId: string): Promise<Domain[]> {
     .order("created_at", { ascending: false });
 
   throwIfMatuError(error);
-  return (data ?? []) as Domain[];
+  const domains = (data ?? []) as Domain[];
+  return Promise.all(
+    domains.map(async (d) => ({
+      ...d,
+      health: await getDomainHealth(d),
+    }))
+  );
 }
 
-export async function getDomain(userId: string, id: string): Promise<Domain> {
+export async function getDomain(userId: string, id: string): Promise<DomainWithHealth> {
   const { data, error } = await getDb()
     .from("domains")
     .select("*")
@@ -26,7 +40,8 @@ export async function getDomain(userId: string, id: string): Promise<Domain> {
 
   throwIfMatuError(error, "Domain not found");
   if (!data) throw new NotFoundError("Domain not found");
-  return data as Domain;
+  const domain = data as Domain;
+  return { ...domain, health: await getDomainHealth(domain) };
 }
 
 export async function createDomain(
@@ -80,8 +95,9 @@ export async function createDomain(
   throwIfMatuError(dnsError);
 
   await ensureDefaultSite(parsed.fqdn);
+  await provisionDomainOnServer(userId, domain);
 
-  return domain;
+  return { ...(await getDomain(userId, domain.id)), health: await getDomainHealth(domain) };
 }
 
 export async function updateDomain(
@@ -112,9 +128,27 @@ export async function deleteDomain(userId: string, id: string): Promise<void> {
   throwIfMatuError(error);
 }
 
-export async function activateDomain(userId: string, id: string): Promise<Domain> {
+export async function activateDomain(userId: string, id: string): Promise<DomainWithHealth> {
   const domain = await getDomain(userId, id);
-  const updated = await updateDomain(userId, id, { status: "active" });
-  await ensureDefaultSite(domain.fqdn);
-  return updated;
+  await updateDomain(userId, id, { status: "active" });
+  await provisionDomainOnServer(userId, domain);
+  return verifyAndSyncDomain(userId, { ...domain, status: "active" });
+}
+
+export async function verifyDomainDnsForUser(
+  userId: string,
+  id: string
+): Promise<DomainWithHealth> {
+  const domain = await getDomain(userId, id);
+  await provisionDomainOnServer(userId, domain);
+  return verifyAndSyncDomain(userId, domain);
+}
+
+export async function reprovisionDomain(
+  userId: string,
+  id: string
+): Promise<DomainWithHealth> {
+  const domain = await getDomain(userId, id);
+  await provisionDomainOnServer(userId, domain);
+  return { ...domain, health: await getDomainHealth(domain) };
 }
