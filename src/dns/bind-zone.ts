@@ -10,30 +10,30 @@ export interface BindZoneConfig {
 }
 
 function fqdnDot(name: string, zone: string): string {
-  if (name === "@" || name === "" || name === zone) return `${zone}.`;
-  if (name.endsWith(".")) return name;
-  if (name.includes(".")) return `${name}.`;
-  return `${name}.${zone}.`;
+  const n = name.trim().toLowerCase();
+  if (n === "@" || n === "" || n === zone) return `${zone}.`;
+  if (n.endsWith(".")) return n;
+  if (n.includes(".")) return `${n}.`;
+  return `${n}.${zone}.`;
 }
 
+/** Formato BIND: owner [TTL] IN type rdata (TTL global vía $TTL). */
 function formatRecord(rec: DnsRecord, zone: string): string | null {
-  const ttl = rec.ttl ?? 3600;
-  const name = rec.name === "@" ? "@" : rec.name;
-  const owner = name === "@" ? "@" : name;
+  const owner = rec.name === "@" ? "@" : rec.name;
 
   switch (rec.type) {
     case "A":
-      return `${owner.padEnd(20)} IN  A     ${ttl}  ${rec.content}`;
+      return `${owner}\tIN\tA\t${rec.content.trim()}`;
     case "AAAA":
-      return `${owner.padEnd(20)} IN  AAAA  ${ttl}  ${rec.content}`;
+      return `${owner}\tIN\tAAAA\t${rec.content.trim()}`;
     case "CNAME":
-      return `${owner.padEnd(20)} IN  CNAME ${ttl}  ${fqdnDot(rec.content, zone)}`;
+      return `${owner}\tIN\tCNAME\t${fqdnDot(rec.content, zone)}`;
     case "MX":
-      return `${owner.padEnd(20)} IN  MX    ${ttl}  ${rec.priority ?? 10} ${fqdnDot(rec.content, zone)}`;
+      return `${owner}\tIN\tMX\t${rec.priority ?? 10}\t${fqdnDot(rec.content, zone)}`;
     case "TXT":
-      return `${owner.padEnd(20)} IN  TXT   ${ttl}  "${rec.content.replace(/"/g, '\\"')}"`;
+      return `${owner}\tIN\tTXT\t"${rec.content.replace(/"/g, '\\"')}"`;
     case "NS":
-      return `${owner.padEnd(20)} IN  NS    ${ttl}  ${fqdnDot(rec.content, zone)}`;
+      return `${owner}\tIN\tNS\t${fqdnDot(rec.content, zone)}`;
     default:
       return null;
   }
@@ -43,22 +43,21 @@ function formatRecord(rec: DnsRecord, zone: string): string | null {
 export function renderBindZoneFile(config: BindZoneConfig, records: DnsRecord[]): string {
   const zone = config.fqdn;
   const admin = (config.adminEmail ?? "hostmaster.matuhost.com").replace("@", ".");
+
   const lines: string[] = [
     `; MatuHost authoritative zone — ${zone}`,
     `; Generated ${new Date().toISOString()}`,
     `$TTL 3600`,
-    `@  IN  SOA  ${fqdnDot(config.ns1, zone)} ${admin}. (`,
-    `        ${config.serial} ; serial`,
-    `        3600       ; refresh`,
-    `        1800       ; retry`,
-    `        604800     ; expire`,
-    `        86400 )    ; minimum`,
+    `@\tIN\tSOA\t${fqdnDot(config.ns1, zone)} ${admin}. (`,
+    `\t\t${config.serial}\t; serial`,
+    `\t\t3600\t\t; refresh`,
+    `\t\t1800\t\t; retry`,
+    `\t\t604800\t\t; expire`,
+    `\t\t86400 )\t\t; minimum`,
     "",
     `; Nameservers MatuHost`,
-    `@  IN  NS   ${fqdnDot(config.ns1, zone)}`,
-    `@  IN  NS   ${fqdnDot(config.ns2, zone)}`,
-    `${config.ns1.split(".")[0].padEnd(20)} IN  A     ${config.serverIp}`,
-    `${config.ns2.split(".")[0].padEnd(20)} IN  A     ${config.serverIp}`,
+    `@\tIN\tNS\t${fqdnDot(config.ns1, zone)}`,
+    `@\tIN\tNS\t${fqdnDot(config.ns2, zone)}`,
     "",
     `; Records from MatuHost DNS Manager`,
   ];
@@ -73,10 +72,10 @@ export function renderBindZoneFile(config: BindZoneConfig, records: DnsRecord[])
   }
 
   if (!records.some((r) => r.type === "A" && (r.name === "@" || r.name === zone))) {
-    lines.push(`@`.padEnd(20) + ` IN  A     3600  ${config.serverIp}`);
+    lines.push(`@\tIN\tA\t${config.serverIp}`);
   }
   if (!records.some((r) => r.type === "A" && r.name === "www")) {
-    lines.push(`www`.padEnd(20) + ` IN  A     3600  ${config.serverIp}`);
+    lines.push(`www\tIN\tA\t${config.serverIp}`);
   }
 
   lines.push("");
