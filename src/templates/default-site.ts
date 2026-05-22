@@ -4,7 +4,7 @@ export interface DefaultSiteOptions {
   docsUrl?: string;
 }
 
-/** Página por defecto (estilo Firebase) cuando el dominio está OK pero no hay despliegue. */
+/** Página de bienvenida por dominio (estilo nginx / Firebase). */
 export function renderDefaultSiteHtml(options: DefaultSiteOptions): string {
   const { fqdn, panelUrl, docsUrl = `${panelUrl.replace(/\/$/, "")}/dashboard/hosting` } = options;
   const year = new Date().getFullYear();
@@ -16,7 +16,7 @@ export function renderDefaultSiteHtml(options: DefaultSiteOptions): string {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>${fqdn} — MatuHost</title>
+  <title>Welcome to MatuHost — ${fqdn}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -36,7 +36,14 @@ export function renderDefaultSiteHtml(options: DefaultSiteOptions): string {
       font-weight: 400;
       color: #202124;
       letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+    .domain-title {
+      font-size: 1.125rem;
+      font-weight: 500;
+      color: #5f6368;
       margin-bottom: 32px;
+      font-family: ui-monospace, monospace;
     }
     h2 {
       font-size: 1.125rem;
@@ -55,16 +62,6 @@ export function renderDefaultSiteHtml(options: DefaultSiteOptions): string {
       text-decoration: none;
     }
     a:hover { text-decoration: underline; }
-    .domain {
-      display: inline-block;
-      margin-top: 8px;
-      padding: 4px 10px;
-      background: #f3e8ff;
-      color: #5b21b6;
-      border-radius: 6px;
-      font-family: ui-monospace, monospace;
-      font-size: 0.875rem;
-    }
     .badge {
       display: inline-flex;
       align-items: center;
@@ -91,11 +88,7 @@ export function renderDefaultSiteHtml(options: DefaultSiteOptions): string {
       align-items: center;
       gap: 10px;
     }
-    .logo-icon {
-      width: 36px;
-      height: 36px;
-      flex-shrink: 0;
-    }
+    .logo-icon { width: 36px; height: 36px; flex-shrink: 0; }
     .logo-text {
       font-size: 1.25rem;
       font-weight: 600;
@@ -113,26 +106,25 @@ export function renderDefaultSiteHtml(options: DefaultSiteOptions): string {
 </head>
 <body>
   <div class="wrap">
-    <div class="badge"><span class="badge-dot"></span> Conectado a MatuHost</div>
-    <h1>Tu dominio ya está enlazado</h1>
+    <div class="badge"><span class="badge-dot"></span> En línea en MatuHost</div>
+    <h1>Welcome to MatuHost!</h1>
+    <p class="domain-title">${escapeHtml(fqdn)}</p>
     <p>
-      Si ves esta página, el hosting de <strong>${escapeHtml(fqdn)}</strong> está activo en el servidor MatuHost.
-      <span class="domain">${escapeHtml(fqdn)}</span>
+      Si ves esta página, el dominio <strong>${escapeHtml(fqdn)}</strong> está registrado,
+      el DNS apunta a este servidor y el hosting está activo.
     </p>
 
     <h2>¿Por qué veo esta página?</h2>
-    <p>Es la página de bienvenida por defecto. Significa que DNS y Nginx en tu VPS están configurados; aún no has subido tu propia web.</p>
+    <p>Es la página de bienvenida de MatuHost para este dominio. Aún no has subido tu sitio web propio.</p>
     <ol>
-      <li>El dominio está registrado en MatuHost y el servidor responde.</li>
-      <li>Cuando reemplaces <code>index.html</code> en <code>public_html</code>, verás tu sitio.</li>
-      <li>Si el navegador muestra error DNS al abrir solo el nombre del dominio, usa el enlace de vista previa del panel hasta que el DNS global termine de propagar.</li>
+      <li>El dominio está enlazado correctamente a MatuHost.</li>
+      <li>Puedes reemplazar <code>index.html</code> en <code>public_html</code> cuando quieras publicar tu web.</li>
     </ol>
 
-    <h2>¿Cómo publico mi sitio?</h2>
+    <h2>Siguiente paso</h2>
     <p>
-      Entra al <a href="${escapeAttr(panelUrl)}">panel de MatuHost</a>, crea una cuenta de hosting
-      o sube tus archivos a <code>public_html</code>.
-      Consulta la <a href="${escapeAttr(docsUrl)}">guía de hosting</a> para empezar.
+      Entra al <a href="${escapeAttr(panelUrl)}">panel de MatuHost</a> o consulta la
+      <a href="${escapeAttr(docsUrl)}">guía de hosting</a>.
     </p>
 
     <footer>
@@ -148,7 +140,7 @@ export function renderDefaultSiteHtml(options: DefaultSiteOptions): string {
       </svg>
       <div>
         <div class="logo-text"><span>Matu</span>Host</div>
-        <div class="muted">© ${year} · Página por defecto</div>
+        <div class="muted">© ${year} · ${escapeHtml(fqdn)}</div>
       </div>
     </footer>
   </div>

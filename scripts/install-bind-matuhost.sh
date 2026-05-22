@@ -15,12 +15,11 @@ if ! grep -q "matuhost-zones.conf" /etc/bind/named.conf.local 2>/dev/null; then
   echo 'include "/etc/bind/matuhost-zones.conf";' >> /etc/bind/named.conf.local
 fi
 
-# Permitir consultas (ajusta ACL en producción)
-cat > /etc/bind/named.conf.options.matuhost <<'EOF'
-// Añade manualmente en options { } si hace falta:
-// allow-query { any; };
-// listen-on { any; };
-EOF
+# Consultas públicas (DNS global)
+OPTIONS="/etc/bind/named.conf.options"
+if [ -f "$OPTIONS" ] && ! grep -q "MatuHost allow-query" "$OPTIONS"; then
+  sed -i '/options {/a \    // MatuHost allow-query\n    listen-on { any; };\n    listen-on-v6 { any; };\n    allow-query { any; };' "$OPTIONS" 2>/dev/null || true
+fi
 
 systemctl enable named
 systemctl restart named

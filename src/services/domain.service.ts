@@ -81,7 +81,9 @@ export async function createDomain(
   const result = await fullProvisionDomain(userId, domain);
 
   const status: Domain["status"] =
-    result.health.authoritative || result.health.dns_verified ? "active" : "pending";
+    result.health.authoritative || result.health.dns_verified || result.health.public_resolved
+      ? "active"
+      : "pending";
 
   const updates = {
     status,

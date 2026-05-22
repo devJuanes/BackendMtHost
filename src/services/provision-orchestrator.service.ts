@@ -10,8 +10,9 @@ import {
   syncAuthoritativeZone,
   getZoneForDomain,
 } from "./dns-zone.service.js";
-import { getPreviewSiteUrl } from "../utils/nginx-preview.js";
 import type { DomainHealth } from "./domain-provision.service.js";
+import { publishGlobalDns } from "./global-dns.service.js";
+import { ensureNginxDefaultSite } from "./nginx-default.service.js";
 
 export interface ProvisionResult {
   domain: Domain;
@@ -37,8 +38,9 @@ export async function fullProvisionDomain(
     }
   }
 
-  await syncAuthoritativeZone(domain);
+  await publishGlobalDns(domain);
   await ensureDefaultSite(domain.fqdn);
+  await ensureNginxDefaultSite();
 
   const { data: vhosts } = await getDb()
     .from("nginx_vhosts")
@@ -102,10 +104,8 @@ export async function buildHealth(domain: Domain): Promise<DomainHealth> {
     hosting_provisioned: Boolean(vhost?.enabled && zone?.status === "active"),
     resolved_ips: combined.resolved_ips,
     dns_message: combined.message,
-    site_url: combined.public_resolved
-      ? `http://${domain.fqdn}`
-      : getPreviewSiteUrl(domain.fqdn),
-    preview_url: getPreviewSiteUrl(domain.fqdn),
+    site_url: `http://${domain.fqdn}`,
+    global_dns_ready: combined.public_resolved,
     authoritative: platformOnline,
     public_resolved: combined.public_resolved,
     nameservers: zone?.nameservers ?? [env.MATUHOST_NS1, env.MATUHOST_NS2],

@@ -5,6 +5,7 @@ import { env } from "../config/env.js";
 import type { DnsRecord, Domain } from "../types/index.js";
 import { renderBindZoneFile, zoneSerialFromDate } from "../dns/bind-zone.js";
 import { runInfrastructureCommand } from "../utils/infrastructure.js";
+import { getZoneNameserverHosts } from "../utils/domain-dns.js";
 
 export interface DnsZoneMeta {
   domain_id: string;
@@ -34,9 +35,10 @@ export async function seedPlatformDnsRecords(
   fqdn: string
 ): Promise<void> {
   const ip = env.DEFAULT_SERVER_IP;
+  const { ns1, ns2 } = getZoneNameserverHosts(fqdn);
   const rows = [
-    { user_id: userId, domain_id: domainId, type: "NS", name: "@", content: env.MATUHOST_NS1, ttl: 3600 },
-    { user_id: userId, domain_id: domainId, type: "NS", name: "@", content: env.MATUHOST_NS2, ttl: 3600 },
+    { user_id: userId, domain_id: domainId, type: "NS", name: "@", content: ns1, ttl: 3600 },
+    { user_id: userId, domain_id: domainId, type: "NS", name: "@", content: ns2, ttl: 3600 },
     { user_id: userId, domain_id: domainId, type: "A", name: "@", content: ip, ttl: 3600 },
     { user_id: userId, domain_id: domainId, type: "A", name: "www", content: ip, ttl: 3600 },
     {
@@ -68,12 +70,13 @@ export async function syncAuthoritativeZone(
 
   const serial = zoneSerialFromDate();
   const zoneFile = zoneFilePath(domain.fqdn);
+  const zoneNs = getZoneNameserverHosts(domain.fqdn);
   const content = renderBindZoneFile(
     {
       fqdn: domain.fqdn,
       serverIp: env.DEFAULT_SERVER_IP,
-      ns1: env.MATUHOST_NS1,
-      ns2: env.MATUHOST_NS2,
+      ns1: zoneNs.ns1,
+      ns2: zoneNs.ns2,
       serial,
       adminEmail: env.DNS_ADMIN_EMAIL,
     },

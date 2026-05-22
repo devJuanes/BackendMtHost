@@ -2,6 +2,7 @@ import { getDb, throwIfMatuError } from "../db/matu.js";
 import { parseFqdn } from "../utils/domain.js";
 import { ValidationError, ConflictError } from "../utils/errors.js";
 import { env } from "../config/env.js";
+import { getZoneNameserverHosts } from "../utils/domain-dns.js";
 
 export interface DomainAvailability {
   fqdn: string;
@@ -40,7 +41,7 @@ export async function checkDomainAvailability(fqdnInput: string): Promise<Domain
       ? "Ya registrado en MatuHost"
       : "Disponible para registro en la plataforma",
     platform_managed: true,
-    suggested_nameservers: [env.MATUHOST_NS1, env.MATUHOST_NS2],
+    suggested_nameservers: Object.values(getZoneNameserverHosts(parsed.fqdn)),
   };
 }
 

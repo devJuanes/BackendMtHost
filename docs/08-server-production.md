@@ -107,7 +107,7 @@ DEFAULT_SERVER_IP=187.124.241.122
 pm2 restart matuhost-api --update-env
 ```
 
-**Vista previa del sitio (sin DNS global):** en `matuhost-api.conf` añade el bloque `location /site-preview/` del ejemplo `docs/nginx-matuhost-api.conf.example`, luego `sudo nginx -t && sudo systemctl reload nginx`. Abre `http://187.124.241.122/site-preview/tudominio.com/` para ver la página de bienvenida aunque el dominio aún devuelva NXDOMAIN en el navegador.
+**DNS global (apex como landatech.ai):** en `.env` del backend configura `REGISTRAR_API_URL` para que MatuHost publique NS/A en tu registrador al crear o verificar el dominio. Sin eso, Internet no resolverá un apex que solo existe en BIND local.
 
 **Alternativa:** abrir puerto 4000: `sudo ufw allow 4000/tcp` (menos recomendado).
 

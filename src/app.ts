@@ -3,7 +3,6 @@ import cors from "cors";
 import helmet from "helmet";
 import { env } from "./config/env.js";
 import routes from "./routes/index.js";
-import sitePreviewRoutes from "./routes/site-preview.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 export function createApp() {
@@ -17,9 +16,6 @@ export function createApp() {
     })
   );
   app.use(express.json({ limit: "1mb" }));
-
-  const previewPath = env.SITE_PREVIEW_PATH.replace(/\/$/, "") || "/site-preview";
-  app.use(previewPath, sitePreviewRoutes);
 
   app.use("/api", routes);
 

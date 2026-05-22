@@ -10,7 +10,7 @@ export interface DomainHealth {
   site_url: string;
   authoritative?: boolean;
   public_resolved?: boolean;
-  preview_url?: string;
+  global_dns_ready?: boolean;
   nameservers?: string[];
 }
 

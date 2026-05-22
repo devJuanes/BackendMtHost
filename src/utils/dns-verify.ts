@@ -118,8 +118,8 @@ export async function verifyDomainDnsPublic(
       public_resolved: false,
       resolved_ips: [],
       message: isUnderPlatformApex(fqdn)
-        ? "DNS global: pendiente. El sitio ya responde en MatuHost; configura NS del apex una vez en tu registrador."
-        : "DNS global: pendiente. En MatuHost el dominio ya está alojado (zona + Nginx). La compra vía API asignará NS sin pasos manuales.",
+        ? "DNS global: propagando. La delegación en la zona padre MatuHost ya se publicó."
+        : "DNS global: propagando. El API del registrador publicó NS/A; puede tardar unos minutos.",
     };
   }
 
@@ -146,7 +146,7 @@ export async function verifyDomainDns(fqdn: string, expectedIp: string): Promise
   if (auth.verified) {
     const message = pub.public_resolved
       ? `${auth.message} · ${pub.message}`
-      : `${auth.message} · DNS global aún propagando (normal en dominios nuevos).`;
+      : `${auth.message} · DNS global propagando (reintenta verificar en 2–5 min).`;
     return {
       verified: true,
       authoritative: true,

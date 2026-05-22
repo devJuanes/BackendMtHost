@@ -78,6 +78,14 @@ export function renderBindZoneFile(config: BindZoneConfig, records: DnsRecord[])
     lines.push(`www\tIN\tA\t${config.serverIp}`);
   }
 
+  for (const nsHost of [config.ns1, config.ns2]) {
+    const h = nsHost.toLowerCase();
+    if (!h.endsWith(`.${zone}`)) continue;
+    const label = h.slice(0, -(zone.length + 1));
+    if (!label || records.some((r) => r.type === "A" && r.name === label)) continue;
+    lines.push(`${label}\tIN\tA\t${config.serverIp}`);
+  }
+
   lines.push("");
   return lines.join("\n");
 }

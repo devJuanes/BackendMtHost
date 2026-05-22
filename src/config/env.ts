@@ -29,8 +29,16 @@ const envSchema = z.object({
   CERTBOT_CMD: z.string().optional(),
   /** Dominio apex de la plataforma (ej. hosts.matuhost.com). Registro "miweb" → miweb.hosts.matuhost.com */
   PLATFORM_APEX_DOMAIN: z.string().optional(),
-  /** Ruta preview: http://IP/site-preview/dominio/ */
-  SITE_PREVIEW_PATH: z.string().default("/site-preview"),
+  /** Zona padre con glue (ej. matuhost.com) */
+  PLATFORM_PARENT_ZONE: z.string().optional(),
+  PLATFORM_PARENT_ZONE_FILE: z.string().optional(),
+  /** platform = ns1.matuhost.com · in-zone = ns1.tudominio.com (apex) */
+  MATUHOST_NS_MODE: z.enum(["platform", "in-zone"]).default("platform"),
+  REGISTRAR_API_URL: z.string().optional(),
+  REGISTRAR_API_KEY: z.string().optional(),
+  REGISTRAR_PUBLISH_MODE: z.enum(["nameservers", "a-record", "both"]).default("both"),
+  REGISTRAR_API_NS_PATH: z.string().optional(),
+  REGISTRAR_API_A_PATH: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

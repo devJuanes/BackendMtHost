@@ -82,9 +82,25 @@ El usuario registra `miweb` → la plataforma crea `miweb.hosts.matuhost.com` co
 
 Delega **una sola vez** en el registrador del apex `matuhost.com` los NS hacia MatuHost; los subdominios de clientes no requieren GoDaddy.
 
-## Dominios apex propios (.ai, .com)
+## DNS global (producción)
 
-La **zona BIND** se crea igual desde el panel. La API de registrador (futuro) asignará NS a `ns1.matuhost.com` / `ns2.matuhost.com` sin intervención del usuario.
+Al registrar o pulsar **↻**, `publishGlobalDns`:
+
+1. Sincroniza zona BIND del dominio (+ glue `ns1`/`ns2` en zona padre si `PLATFORM_PARENT_ZONE`)
+2. Delega subdominios bajo `PLATFORM_APEX_DOMAIN` en la zona padre
+3. Llama `REGISTRAR_API_URL` para apex externos (`landatech.ai`) — publica NS y/o registros A
+
+Variables en `.env`:
+
+```env
+PLATFORM_PARENT_ZONE=matuhost.com
+PLATFORM_PARENT_ZONE_FILE=/etc/bind/zones/matuhost/db.matuhost.com
+PLATFORM_APEX_DOMAIN=hosts.matuhost.com
+REGISTRAR_API_URL=https://tu-api-registrador/v1
+REGISTRAR_PUBLISH_MODE=both
+```
+
+Apex como `landatech.ai` usan NS in-zone (`ns1.landatech.ai`, `ns2.landatech.ai`) con glue en la misma zona BIND.
 
 ## API
 
