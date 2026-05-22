@@ -34,14 +34,31 @@ export function isUnderPlatformApex(fqdn: string): boolean {
   return f === apex || f.endsWith(`.${apex}`);
 }
 
+function authoritativeResolvers(): string[] {
+  const seen = new Set<string>();
+  for (const ip of ["127.0.0.1", "::1", env.DNS_SERVER_IP, env.DEFAULT_SERVER_IP]) {
+    if (ip && !seen.has(ip)) seen.add(ip);
+  }
+  return [...seen];
+}
+
 /** Consulta el DNS autoritativo de MatuHost (BIND en el VPS). */
 export async function verifyDomainDnsAuthoritative(
   fqdn: string,
   expectedIp: string
 ): Promise<DnsVerifyResult> {
-  const server = env.DNS_SERVER_IP || env.DEFAULT_SERVER_IP;
-  const ips = await resolveAt(fqdn, server);
   const expected = expectedIp.trim();
+  let ips: string[] = [];
+  let usedResolver = "";
+
+  for (const server of authoritativeResolvers()) {
+    const answers = await resolveAt(fqdn, server);
+    if (answers.length > 0) {
+      ips = answers;
+      usedResolver = server;
+      break;
+    }
+  }
 
   if (ips.length === 0) {
     return {
@@ -50,7 +67,9 @@ export async function verifyDomainDnsAuthoritative(
       public_resolved: false,
       resolved_ips: [],
       message:
-        "Zona creada en MatuHost; BIND no responde aún. En el servidor: npm run dns:sync, sudo ufw allow 53, sudo systemctl restart named",
+        "BIND no responde en este servidor. Ejecuta: sudo systemctl status named · npm run dns:sync · dig @127.0.0.1 " +
+        fqdn +
+        " A +short",
     };
   }
 
@@ -61,8 +80,8 @@ export async function verifyDomainDnsAuthoritative(
     public_resolved: false,
     resolved_ips: ips,
     message: ok
-      ? `En línea en MatuHost: DNS autoritativo (${server}) → ${expected}`
-      : `BIND responde ${ips.join(", ")}; se esperaba ${expected}`,
+      ? `Activo en MatuHost (DNS ${usedResolver}) → ${expected}. Sitio: http://${fqdn}`
+      : `BIND (${usedResolver}) devuelve ${ips.join(", ")}; se esperaba ${expected}`,
   };
 }
 
@@ -99,8 +118,8 @@ export async function verifyDomainDnsPublic(
       public_resolved: false,
       resolved_ips: [],
       message: isUnderPlatformApex(fqdn)
-        ? "Propagación global pendiente (el apex de plataforma debe delegar NS a MatuHost una sola vez)."
-        : "Propagación global pendiente. El dominio ya funciona en la infraestructura MatuHost; la API de registrador asignará NS automáticamente.",
+        ? "DNS global: pendiente. El sitio ya responde en MatuHost; configura NS del apex una vez en tu registrador."
+        : "DNS global: pendiente. En MatuHost el dominio ya está alojado (zona + Nginx). La compra vía API asignará NS sin pasos manuales.",
     };
   }
 
@@ -127,7 +146,7 @@ export async function verifyDomainDns(fqdn: string, expectedIp: string): Promise
   if (auth.verified) {
     const message = pub.public_resolved
       ? `${auth.message} · ${pub.message}`
-      : `${auth.message} · Sitio activo en tu VPS (acceso: http://${fqdn} cuando NS global propaguen o vía IP del servidor).`;
+      : `${auth.message} · DNS global aún propagando (normal en dominios nuevos).`;
     return {
       verified: true,
       authoritative: true,
@@ -146,6 +165,6 @@ export async function verifyDomainDns(fqdn: string, expectedIp: string): Promise
     authoritative: auth.authoritative,
     public_resolved: false,
     resolved_ips: auth.resolved_ips.length ? auth.resolved_ips : pub.resolved_ips,
-    message: auth.resolved_ips.length ? auth.message : pub.message,
+    message: auth.message || pub.message,
   };
 }
